@@ -25,7 +25,7 @@
 // this one is a 4x augmentation of the laughing zebra
 static char input_fname[] = "../data/zebra-gray-int8-4x";
 static int data_dims[2] = {7112, 5146}; // width=ncols, height=nrows
-char output_fname[] = "../data/processed-raw-int8-4x-cpu.dat";
+char output_fname[] = "../data/processed-raw-int8-4x-offload.dat";
 
 int row_maj_reverse_index(int row, int col, int rowSize) {
    return row * rowSize + col;
