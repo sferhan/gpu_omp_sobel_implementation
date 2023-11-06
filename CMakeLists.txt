@@ -1,6 +1,5 @@
 cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
-# project(sobel_harness LANGUAGES CXX CUDA)
-project(sobel_harness LANGUAGES CXX)
+project(sobel_harness LANGUAGES CXX CUDA)
 
 # 19 oct 2023: we are assuming the use of the NVHPC compiler on Perlmutter
 # the compilation flags baked in below reflect that assumption
