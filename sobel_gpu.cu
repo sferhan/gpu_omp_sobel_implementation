@@ -144,7 +144,10 @@ sobel_kernel_gpu(float *s,  // source image pixels
 
    int origin_index = threadIdx.x + blockIdx.x * blockDim.x;
 
-   if(origin_index < n) {
+   int index = threadIdx.x;
+   int stride = blockDim.x;
+   for (int i = index; i < n; i += stride) {
+      int origin_index = i;
       D2Point point = row_maj_to_2d(origin_index, width);
       d[origin_index] = sobel_filtered_pixel(s, point.row, point.col, width, height, gx, gy);
    }
@@ -207,44 +210,27 @@ main (int ac, char *av[])
    cudaMemPrefetchAsync((void *)device_gy, sizeof(Gy)*sizeof(float), deviceID);
 
    std::vector<int> threadsPerBlockVariants{32, 64, 128, 256, 512, 1024};
+   std::vector<int> numOfBlockVariants{1, 4, 16, 64, 256, 1024, 4096};
 
    for(int i = 0; i< threadsPerBlockVariants.size(); i++) {
-      int nThreadsPerBlock = threadsPerBlockVariants[i];
-      int nBlocks = (nvalues + nThreadsPerBlock -1) / nThreadsPerBlock;
+      for(int j = 0; j< numOfBlockVariants.size(); j++) {
+         int nThreadsPerBlock = threadsPerBlockVariants[i];
+         int nBlocks = numOfBlockVariants[j];
 
-      printf(" GPU configuration: %d blocks, %d threads per block \n", nBlocks, nThreadsPerBlock);
+         printf(" GPU configuration: %d blocks, %d threads per block \n", nBlocks, nThreadsPerBlock);
 
-      std::chrono::time_point<std::chrono::high_resolution_clock> start_time = std::chrono::high_resolution_clock::now();
-      
-      // invoke the kernel on the device
-      sobel_kernel_gpu<<<nBlocks, nThreadsPerBlock>>>(in_data_floats, out_data_floats, nvalues, data_dims[1], data_dims[0], device_gx, device_gy);
+         std::chrono::time_point<std::chrono::high_resolution_clock> start_time = std::chrono::high_resolution_clock::now();
+         
+         // invoke the kernel on the device
+         sobel_kernel_gpu<<<nBlocks, nThreadsPerBlock>>>(in_data_floats, out_data_floats, nvalues, data_dims[1], data_dims[0], device_gx, device_gy);
 
-      std::chrono::time_point<std::chrono::high_resolution_clock> end_time = std::chrono::high_resolution_clock::now();
+         std::chrono::time_point<std::chrono::high_resolution_clock> end_time = std::chrono::high_resolution_clock::now();
 
-      std::chrono::duration<double> elapsed = end_time - start_time;
-      std::cout << " Elapsed time is : " << elapsed.count() << " " << std::endl<<std::endl;
-      // wait for it to finish, check errors
-      gpuErrchk (  cudaDeviceSynchronize() );
-   }
-
-   std::vector<int> numOfBlockVariants{1, 4, 16, 64, 256, 1024, 4096};
-   for(int i = 0; i< numOfBlockVariants.size(); i++) {
-      int nBlocks = numOfBlockVariants[i];
-      int nThreadsPerBlock = ceil(nvalues/nBlocks);
-
-      printf(" GPU configuration: %d blocks, %d threads per block \n", nBlocks, nThreadsPerBlock);
-
-      std::chrono::time_point<std::chrono::high_resolution_clock> start_time = std::chrono::high_resolution_clock::now();
-      
-      // invoke the kernel on the device
-      sobel_kernel_gpu<<<nBlocks, nThreadsPerBlock>>>(in_data_floats, out_data_floats, nvalues, data_dims[1], data_dims[0], device_gx, device_gy);
-
-      std::chrono::time_point<std::chrono::high_resolution_clock> end_time = std::chrono::high_resolution_clock::now();
-
-      std::chrono::duration<double> elapsed = end_time - start_time;
-      std::cout << " Elapsed time is : " << elapsed.count() << " " << std::endl<<std::endl;
-      // wait for it to finish, check errors
-      gpuErrchk (  cudaDeviceSynchronize() );
+         std::chrono::duration<double> elapsed = end_time - start_time;
+         std::cout << " Elapsed time is : " << elapsed.count() << " " << std::endl<<std::endl;
+         // wait for it to finish, check errors
+         gpuErrchk (  cudaDeviceSynchronize() );
+      }
    }
 
    // write output after converting from floats in range 0..1 to bytes in range 0..255
