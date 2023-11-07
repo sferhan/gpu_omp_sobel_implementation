@@ -102,7 +102,7 @@ do_sobel_filtering(float *in, float *out, int width, int height)
    // to sobel_filtered_pixel, and assigns the resulting value at location (i,j) in the output.
 
    // raster scan starts from top left and goes right and then towards bottom
-   # pragma omp parallel for collapse(2)
+   # pragma omp parallel for
    for(int i=0; i< height; i++) {
       for(int j=0; j< width; j++) {
          out[row_maj_reverse_index(i, j, width)] = sobel_filtered_pixel(in, i, j, width, height, Gx, Gy);

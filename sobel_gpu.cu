@@ -206,11 +206,31 @@ main (int ac, char *av[])
    cudaMemPrefetchAsync((void *)device_gx, sizeof(Gx)*sizeof(float), deviceID);
    cudaMemPrefetchAsync((void *)device_gy, sizeof(Gy)*sizeof(float), deviceID);
 
-   std::vector<int> threadsPerBlockVariants{128, 256, 512};
+   std::vector<int> threadsPerBlockVariants{32, 64, 128, 256, 512, 1024};
 
    for(int i = 0; i< threadsPerBlockVariants.size(); i++) {
       int nThreadsPerBlock = threadsPerBlockVariants[i];
       int nBlocks = (nvalues + nThreadsPerBlock -1) / nThreadsPerBlock;
+
+      printf(" GPU configuration: %d blocks, %d threads per block \n", nBlocks, nThreadsPerBlock);
+
+      std::chrono::time_point<std::chrono::high_resolution_clock> start_time = std::chrono::high_resolution_clock::now();
+      
+      // invoke the kernel on the device
+      sobel_kernel_gpu<<<nBlocks, nThreadsPerBlock>>>(in_data_floats, out_data_floats, nvalues, data_dims[1], data_dims[0], device_gx, device_gy);
+
+      std::chrono::time_point<std::chrono::high_resolution_clock> end_time = std::chrono::high_resolution_clock::now();
+
+      std::chrono::duration<double> elapsed = end_time - start_time;
+      std::cout << " Elapsed time is : " << elapsed.count() << " " << std::endl<<std::endl;
+      // wait for it to finish, check errors
+      gpuErrchk (  cudaDeviceSynchronize() );
+   }
+
+   std::vector<int> numOfBlockVariants{1, 4, 16, 64, 256, 1024, 4096};
+   for(int i = 0; i< numOfBlockVariants.size(); i++) {
+      int nBlocks = numOfBlockVariants[i];
+      int nThreadsPerBlock = ceil(nvalues/nBlocks);
 
       printf(" GPU configuration: %d blocks, %d threads per block \n", nBlocks, nThreadsPerBlock);
 
