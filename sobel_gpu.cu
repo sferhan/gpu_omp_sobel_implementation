@@ -41,6 +41,36 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
    }
 }
 
+
+int row_maj_reverse_index(int row, int col, int rowSize) {
+   return row * rowSize + col;
+}
+
+int* row_maj_to_2d(int index, int rowSize) {
+   int row = floor(index/rowSize);
+   int col = index - (row * rowSize);
+   int d2_index[2] = {row, col};
+   return d2_index;
+}
+
+float safe_get_matrix_val_at_ij(float* mat, int width, int height, int i, int j) {
+   if(i < 0 || j < 0 || i >= height || j >= width) {
+      return 0.0;
+   }
+   else {
+      return mat[row_maj_reverse_index(i, j, width)];
+   }
+}
+
+float convolute(float* a, float* b, int len) {
+   float conv = 0;
+   for(int i=0; i < len; i++) {
+      conv += a[i] * b[i];
+   }
+   return conv;
+}
+
+
 //
 // this function is callable only from device code
 //
@@ -56,15 +86,20 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
 // see https://en.wikipedia.org/wiki/Sobel_operator
 //
 __device__ float
-sobel_filtered_pixel(float *s, int i, int j , int ncols, int nrows, float *gx, float *gy)
+sobel_filtered_pixel(float *s, int i, int j , int width, int height, float *gx, float *gy)
 {
-
-   float t=0.0;
-
-   // ADD CODE HERE:  add your code here for computing the sobel stencil computation at location (i,j)
+   // ADD CODE HERE: add your code here for computing the sobel stencil computation at location (i,j)
    // of input s, returning a float
+   float neighbors[9] = {
+      safe_get_matrix_val_at_ij(s, width, height, i-1, j-1), safe_get_matrix_val_at_ij(s, width, height, i-1, j), safe_get_matrix_val_at_ij(s, width, height, i-1, j+1),
+      safe_get_matrix_val_at_ij(s, width, height, i, j-1), safe_get_matrix_val_at_ij(s, width, height, i, j), safe_get_matrix_val_at_ij(s, width, height, i, j+1),
+      safe_get_matrix_val_at_ij(s, width, height, i+1, j-1), safe_get_matrix_val_at_ij(s, width, height, i+1, j), safe_get_matrix_val_at_ij(s, width, height, i+1, j+1),
+   };
 
-   return t;
+   float x_diff =  convolute(neighbors, gx, 9);
+   float y_diff =  convolute(neighbors, gy, 9);
+
+   return sqrt( (x_diff*x_diff) + (y_diff*y_diff) ); // G = sqrt(Gx^2 + Gy^2)
 }
 
 //
@@ -86,8 +121,8 @@ __global__ void
 sobel_kernel_gpu(float *s,  // source image pixels
       float *d,  // dst image pixels
       int n,  // size of image cols*rows,
-      int nrows,
-      int ncols,
+      int height,
+      int width,
       float *gx, float *gy) // gx and gy are stencil weights for the sobel filter
 {
    // ADD CODE HERE: insert your code here that iterates over every (i,j) of input,  makes a call
@@ -95,6 +130,13 @@ sobel_kernel_gpu(float *s,  // source image pixels
 
    // because this is CUDA, you need to use CUDA built-in variables to compute an index and stride
    // your processing motif will be very similar here to that we used for vector add in Lab #2
+
+   int origin_index = threadIdx.x + blockIdx.x * blockDim.x;
+
+   if(origin_index < n) {
+      int planer_index[2] = row_maj_to_2d(origin_index, ncols);
+      d[origin_index] = sobel_filtered_pixel(s, planer_index[0], planer_index[1], width, height, gx, gy);
+   }
 }
 
 int
@@ -154,11 +196,11 @@ main (int ac, char *av[])
    cudaMemPrefetchAsync((void *)device_gy, sizeof(Gy)*sizeof(float), deviceID);
 
    // set up to run the kernel
-   int nBlocks=1, nThreadsPerBlock=256;
+   int nThreadsPerBlock=256;
 
    // ADD CODE HERE: insert your code here to set a different number of thread blocks or # of threads per block
 
-
+   int nBlocks = (nvalues + nThreadsPerBlock -1) / nThreadsPerBlock;
 
    printf(" GPU configuration: %d blocks, %d threads per block \n", nBlocks, nThreadsPerBlock);
 
