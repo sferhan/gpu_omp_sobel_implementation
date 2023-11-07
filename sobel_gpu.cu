@@ -206,9 +206,9 @@ main (int ac, char *av[])
    cudaMemPrefetchAsync((void *)device_gx, sizeof(Gx)*sizeof(float), deviceID);
    cudaMemPrefetchAsync((void *)device_gy, sizeof(Gy)*sizeof(float), deviceID);
 
-   int threadsPerBlockVariants[3] = {128, 256, 512};
+   std::vector<int> threadsPerBlockVariants{128, 256, 512};
 
-   for(int i = 0; i< len(threadsPerBlockVariants); i++) {
+   for(int i = 0; i< threadsPerBlockVariants.size(); i++) {
       int nThreadsPerBlock = threadsPerBlockVariants[i];
       int nBlocks = (nvalues + nThreadsPerBlock -1) / nThreadsPerBlock;
 
