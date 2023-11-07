@@ -206,20 +206,26 @@ main (int ac, char *av[])
    cudaMemPrefetchAsync((void *)device_gx, sizeof(Gx)*sizeof(float), deviceID);
    cudaMemPrefetchAsync((void *)device_gy, sizeof(Gy)*sizeof(float), deviceID);
 
-   // set up to run the kernel
-   int nThreadsPerBlock=256;
+   int threadsPerBlockVariants[3] = {128, 256, 512};
 
-   // ADD CODE HERE: insert your code here to set a different number of thread blocks or # of threads per block
+   for(int i = 0; i< len(threadsPerBlockVariants); i++) {
+      int nThreadsPerBlock = threadsPerBlockVariants[i];
+      int nBlocks = (nvalues + nThreadsPerBlock -1) / nThreadsPerBlock;
 
-   int nBlocks = (nvalues + nThreadsPerBlock -1) / nThreadsPerBlock;
+      printf(" GPU configuration: %d blocks, %d threads per block \n", nBlocks, nThreadsPerBlock);
 
-   printf(" GPU configuration: %d blocks, %d threads per block \n", nBlocks, nThreadsPerBlock);
+      std::chrono::time_point<std::chrono::high_resolution_clock> start_time = std::chrono::high_resolution_clock::now();
+      
+      // invoke the kernel on the device
+      sobel_kernel_gpu<<<nBlocks, nThreadsPerBlock>>>(in_data_floats, out_data_floats, nvalues, data_dims[1], data_dims[0], device_gx, device_gy);
 
-   // invoke the kernel on the device
-   sobel_kernel_gpu<<<nBlocks, nThreadsPerBlock>>>(in_data_floats, out_data_floats, nvalues, data_dims[1], data_dims[0], device_gx, device_gy);
+      std::chrono::time_point<std::chrono::high_resolution_clock> end_time = std::chrono::high_resolution_clock::now();
 
-   // wait for it to finish, check errors
-   gpuErrchk (  cudaDeviceSynchronize() );
+      std::chrono::duration<double> elapsed = end_time - start_time;
+      std::cout << " Elapsed time is : " << elapsed.count() << " " << std::endl<<std::endl;
+      // wait for it to finish, check errors
+      gpuErrchk (  cudaDeviceSynchronize() );
+   }
 
    // write output after converting from floats in range 0..1 to bytes in range 0..255
    unsigned char *out_data_bytes = in_data_bytes;  // just reuse the buffer from before
