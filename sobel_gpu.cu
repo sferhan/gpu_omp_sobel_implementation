@@ -32,7 +32,7 @@ char output_fname[] = "../data/processed-raw-int8-4x-cpu.dat";
 struct D2Point {
    int row;
    int col;
-}
+};
 
 // see https://stackoverflow.com/questions/14038589/what-is-the-canonical-way-to-check-for-errors-using-the-cuda-runtime-api
 // macro to check for cuda errors. basic idea: wrap this macro around every cuda call
