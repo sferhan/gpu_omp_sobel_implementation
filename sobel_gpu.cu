@@ -47,10 +47,12 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
 }
 
 
+__device__
 int row_maj_reverse_index(int row, int col, int rowSize) {
    return row * rowSize + col;
 }
 
+__device__
 D2Point row_maj_to_2d(int index, int rowSize) {
    int row = floor(index/rowSize);
    int col = index - (row * rowSize);
@@ -60,6 +62,7 @@ D2Point row_maj_to_2d(int index, int rowSize) {
    return point;
 }
 
+__device__
 float safe_get_matrix_val_at_ij(float* mat, int width, int height, int i, int j) {
    if(i < 0 || j < 0 || i >= height || j >= width) {
       return 0.0;
@@ -69,6 +72,7 @@ float safe_get_matrix_val_at_ij(float* mat, int width, int height, int i, int j)
    }
 }
 
+__device__
 float convolute(float* a, float* b, int len) {
    float conv = 0;
    for(int i=0; i < len; i++) {
