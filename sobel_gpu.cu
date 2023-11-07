@@ -134,7 +134,7 @@ sobel_kernel_gpu(float *s,  // source image pixels
    int origin_index = threadIdx.x + blockIdx.x * blockDim.x;
 
    if(origin_index < n) {
-      int planer_index[2] = row_maj_to_2d(origin_index, ncols);
+      int planer_index[2] = row_maj_to_2d(origin_index, width);
       d[origin_index] = sobel_filtered_pixel(s, planer_index[0], planer_index[1], width, height, gx, gy);
    }
 }
