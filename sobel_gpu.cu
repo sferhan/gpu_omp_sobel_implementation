@@ -29,6 +29,11 @@ static char input_fname[] = "../data/zebra-gray-int8-4x";
 static int data_dims[2] = {7112, 5146}; // width=ncols, height=nrows
 char output_fname[] = "../data/processed-raw-int8-4x-cpu.dat";
 
+struct D2Point {
+   int row;
+   int col;
+}
+
 // see https://stackoverflow.com/questions/14038589/what-is-the-canonical-way-to-check-for-errors-using-the-cuda-runtime-api
 // macro to check for cuda errors. basic idea: wrap this macro around every cuda call
 #define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
@@ -46,11 +51,13 @@ int row_maj_reverse_index(int row, int col, int rowSize) {
    return row * rowSize + col;
 }
 
-int* row_maj_to_2d(int index, int rowSize) {
+D2Point row_maj_to_2d(int index, int rowSize) {
    int row = floor(index/rowSize);
    int col = index - (row * rowSize);
-   int d2_index[2] = {row, col};
-   return d2_index;
+   D2Point point;
+   point.row = row;
+   point.col = col;
+   return point;
 }
 
 float safe_get_matrix_val_at_ij(float* mat, int width, int height, int i, int j) {
@@ -134,8 +141,8 @@ sobel_kernel_gpu(float *s,  // source image pixels
    int origin_index = threadIdx.x + blockIdx.x * blockDim.x;
 
    if(origin_index < n) {
-      int planer_index[2] = row_maj_to_2d(origin_index, width);
-      d[origin_index] = sobel_filtered_pixel(s, planer_index[0], planer_index[1], width, height, gx, gy);
+      D2Point point = row_maj_to_2d(origin_index, width);
+      d[origin_index] = sobel_filtered_pixel(s, point.row, point.col, width, height, gx, gy);
    }
 }
 
