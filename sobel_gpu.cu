@@ -54,7 +54,7 @@ int row_maj_reverse_index(int row, int col, int rowSize) {
 
 __device__
 D2Point row_maj_to_2d(int index, int rowSize) {
-   int row = floor(index/rowSize);
+   int row = floorf(index/rowSize);
    int col = index - (row * rowSize);
    D2Point point;
    point.row = row;
